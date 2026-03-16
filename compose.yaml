@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgis/postgis:16-master
+    container_name: postgresDB2
+    ports:
+      - 5433:5432
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=petdb
+    volumes:
+      - postgresdb_data:/var/lib/postgresql
+
+volumes:
+  postgresdb_data:

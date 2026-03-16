@@ -1,19 +1,19 @@
 import { PetSize } from '../enums/pet-size.enum';
 import { PetSpecies } from '../enums/pet-species.enum';
 
-export class LostPetCDto {
-  name: string;
+export class FoundPetCDto {
   species: PetSpecies;
   breed: string;
   color: string;
   size: PetSize;
   description: string;
   photo_url: string;
-  owner_name: string;
-  owner_email: string;
-  owner_phone: string;
+  finder_name: string;
+  finder_email: string;
+  finder_phone: string;
   lat: number;
   lon: number;
   address: string;
-  lost_date: Date;
+  found_date: Date;
+  lost_pet_id: number;
 }
