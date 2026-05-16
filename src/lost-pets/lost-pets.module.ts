@@ -4,9 +4,13 @@ import { LostPet } from 'src/core/entities/lost-pet.entity';
 import { EmailModule } from 'src/email/email.module';
 import { LostPetsController } from './lost-pets.controller';
 import { LostPetsService } from './lost-pets.service';
+import { CacheModule } from 'src/cache/cache.module';
 
 @Module({
-    imports: [EmailModule, TypeOrmModule.forFeature([LostPet])],
+    imports: [EmailModule, 
+              TypeOrmModule.forFeature([LostPet]),
+              CacheModule
+            ],
     controllers: [LostPetsController],
     providers: [LostPetsService]
 })

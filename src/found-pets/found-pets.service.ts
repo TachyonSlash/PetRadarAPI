@@ -8,6 +8,9 @@ import { LostPetCDto } from 'src/core/models/lostPet.model';
 import { EmailService } from 'src/email/email.service';
 import { EmailOptions } from 'src/core/models/email-options.model';
 import { generateFoundPetEmailTemplate } from './templates/found-pet.template';
+import { CacheService } from 'src/cache/cache.service';
+
+const CACHE_KEY_ALL_FOUND_PETS = "found-pets:all";
 
 @Injectable()
 export class FoundPetsService {
@@ -17,11 +20,23 @@ export class FoundPetsService {
         @InjectRepository(LostPet)
         private readonly lostPetRepository: Repository<LostPet>,
         private readonly emailService: EmailService,
+        private readonly cacheService: CacheService,
     ) {}
 
     async findAll() : Promise<FoundPet[]> {
         try {
+            console.log("[FoundPetsService] Buscando mascotas encontradas en caché");
+            const foundPetsObject = await this.cacheService.get<FoundPet[]>(CACHE_KEY_ALL_FOUND_PETS);
+
+            if(foundPetsObject && foundPetsObject.length > 0){
+                console.log(`[FoundPetsService] Se encontraron ${foundPetsObject.length} mascotas en caché`);
+                return foundPetsObject;
+            }
+
+            console.log("[FoundPetsService] No hay datos en caché, consultando BD");
             const result = await this.foundPetRepository.find();
+            console.log(`[FoundPetsService] Se encontraron ${result.length} mascotas encontradas`);
+            await this.cacheService.set(CACHE_KEY_ALL_FOUND_PETS, result);
             return result;
         } catch (error) {
             console.error(error);
@@ -30,16 +45,6 @@ export class FoundPetsService {
     }
 
     async createFoundPet(foundPet: FoundPetCDto): Promise<Boolean> {
-        const relatedLostPet = await this.lostPetRepository.findOneBy({
-            id: foundPet.lost_pet_id,
-        });
-
-        if (!relatedLostPet) {
-            throw new NotFoundException(
-                `No se encontro la mascota perdida con id ${foundPet.lost_pet_id}`,
-            );
-        }
-
         const newFoundPet = this.foundPetRepository.create({
             species: foundPet.species,
             size: foundPet.size,
@@ -59,37 +64,46 @@ export class FoundPetsService {
         });
 
         await this.foundPetRepository.save(newFoundPet);
+        await this.cacheService.delete(CACHE_KEY_ALL_FOUND_PETS);
 
-        const lostLocation = relatedLostPet.location as unknown as {
-            coordinates: [number, number];
-        };
+        // Buscar lost pets activas dentro de 500 metros usando ST_DWithin y cast a geography
+        const matches = await this.lostPetRepository
+            .createQueryBuilder('lost')
+            .where('lost.is_active = true')
+            .andWhere(
+                'ST_DWithin(lost.location::geography, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography, :distance)',
+                { lon: foundPet.lon, lat: foundPet.lat, distance: 500 },
+            )
+            .getMany();
 
-        const lostPetDto: LostPetCDto = {
-            name: relatedLostPet.name,
-            species: relatedLostPet.species,
-            breed: relatedLostPet.breed ?? '',
-            color: relatedLostPet.color,
-            size: relatedLostPet.size,
-            description: relatedLostPet.description,
-            photo_url: relatedLostPet.photo_url ?? '',
-            owner_name: relatedLostPet.owner_name,
-            owner_email: relatedLostPet.owner_email,
-            owner_phone: relatedLostPet.owner_phone,
-            lat: lostLocation.coordinates[1],
-            lon: lostLocation.coordinates[0],
-            address: relatedLostPet.address,
-            lost_date: relatedLostPet.lost_date,
-        };
+        // Si se encuentran coincidencias, enviar un correo por cada una
+        for (const matched of matches) {
+            const lostLocation = matched.location as unknown as { coordinates: [number, number] };
+            const lostPetDto: LostPetCDto = {
+                name: matched.name,
+                species: matched.species,
+                breed: matched.breed ?? '',
+                color: matched.color,
+                size: matched.size,
+                description: matched.description,
+                photo_url: matched.photo_url ?? '',
+                owner_name: matched.owner_name,
+                owner_email: matched.owner_email,
+                owner_phone: matched.owner_phone,
+                lat: lostLocation.coordinates[1],
+                lon: lostLocation.coordinates[0],
+                address: matched.address,
+                lost_date: matched.lost_date,
+            };
 
-        const template = generateFoundPetEmailTemplate(foundPet, lostPetDto);
-
-        const options: EmailOptions = {
-            to: 'hectorjaz2004@gmail.com',
-            subject: 'Mascota encontrada - posible coincidencia',
-            htmlBody: template,
-        };
-
-        const result = await this.emailService.sendEmail(options);
-        return result;
+            const template = generateFoundPetEmailTemplate(foundPet, lostPetDto);
+            const options: EmailOptions = {
+                to: matched.owner_email,
+                subject: 'Posible coincidencia: mascota encontrada cerca tuya',
+                htmlBody: template,
+            };
+            await this.emailService.sendEmail(options);
+        }
+        return true;
     }
 }
