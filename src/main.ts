@@ -11,3 +11,5 @@ async function bootstrap() {
   logger.info(`Pet Radar escuchando en puerto ${envs.PORT}`);
 }
 bootstrap();
+
+//
