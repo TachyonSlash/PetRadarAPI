@@ -12,12 +12,13 @@ export class EmailService {
                   port: 587,
                   secure: false,
                   requireTLS: true,
+                  family: 4,
                   auth: {
                       user: envs.MAILER_EMAIL,
                       pass: envs.MAILER_PASSWORD,
                   },
                   tls: {
-                      family: 4,
+                      servername: 'smtp.gmail.com',
                   },
               } as nodemailer.TransportOptions)
             : nodemailer.createTransport({
