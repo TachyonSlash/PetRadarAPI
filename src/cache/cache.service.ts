@@ -21,8 +21,8 @@ export class CacheService {
                     tls: envs.REDIS_TLS ? {} : undefined,
                 })
                 : new Redis({
-                    host: envs.REDIS_HOST,
-                    port: envs.REDIS_PORT,
+                    host: envs.REDIS_HOST!,
+                    port: envs.REDIS_PORT!,
                     username: envs.REDIS_USERNAME ?? undefined,
                     password: envs.REDIS_PASSWORD ?? undefined,
                     connectTimeout: 2000,
