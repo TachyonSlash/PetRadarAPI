@@ -2,21 +2,27 @@ import winston from "winston";
 import * as appInsights from "applicationinsights";
 import { envs } from "./envs";
 
-appInsights
+let aiClient: appInsights.TelemetryClient | undefined;
+
+if (envs.APPINSIGHTS_CONNECTION_STRING) {
+  appInsights
     .setup(envs.APPINSIGHTS_CONNECTION_STRING)
     .setAutoCollectConsole(false)
     .setSendLiveMetrics(true)
-    .start()
+    .start();
 
-const aiClient = appInsights.defaultClient;
+  aiClient = appInsights.defaultClient;
+}
  
 const appInsightsTransport = new winston.transports.Console({
   level: "info",
   format: winston.format.printf(({ level, message, timestamp }) => {
-    aiClient.trackTrace({
-      message: `[${level}] ${message}`,
-      properties: { timestamp },
-    });
+    if (aiClient) {
+      aiClient.trackTrace({
+        message: `[${level}] ${message}`,
+        properties: { timestamp },
+      });
+    }
     return `${timestamp} [${level}] ${message}`;
   }),
 });
