@@ -3,7 +3,6 @@ import { DataSourceOptions, DataSource } from "typeorm";
 import { FoundPet } from "../entities/found-pet.entity"; 
 import { LostPet } from "../entities/lost-pet.entity";
 
-
 export const dataSourceOptions : DataSourceOptions = {
     host: envs.DB_HOST,
     database: envs.DB_NAME,
@@ -13,7 +12,8 @@ export const dataSourceOptions : DataSourceOptions = {
     type: 'postgres',
     entities: [FoundPet, LostPet],
     synchronize: false,
-    migrations: ["dist/core/db/migrations/*"]
+    migrations: ["dist/core/db/migrations/*"],
+    ssl: envs.DB_SSL ? { rejectUnauthorized: false } : false,
 }
 
 export const dataSource = new DataSource(dataSourceOptions);
