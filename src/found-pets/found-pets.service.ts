@@ -76,6 +76,13 @@ export class FoundPetsService {
             )
             .getMany();
 
+        console.log(`[FoundPetsService] Se encontraron ${matches.length} mascotas perdidas activas dentro de 500 metros`);
+
+        if (matches.length === 0) {
+            console.log('[FoundPetsService] No se enviaron correos porque no hubo coincidencias cercanas');
+            return true;
+        }
+
         // Si se encuentran coincidencias, enviar un correo por cada una
         for (const matched of matches) {
             const lostLocation = matched.location as unknown as { coordinates: [number, number] };
@@ -102,7 +109,13 @@ export class FoundPetsService {
                 subject: 'Posible coincidencia: mascota encontrada cerca tuya',
                 htmlBody: template,
             };
-            await this.emailService.sendEmail(options);
+            const emailSent = await this.emailService.sendEmail(options);
+
+            if (emailSent) {
+                console.log(`[FoundPetsService] Correo enviado a ${matched.owner_email}`);
+            } else {
+                console.warn(`[FoundPetsService] No se pudo enviar correo a ${matched.owner_email}`);
+            }
         }
         return true;
     }
