@@ -1,30 +1,50 @@
 import 'dotenv/config';
 import * as env from 'env-var';
 
-// Parse DATABASE_URL if provided (for Neon/Railway), otherwise use individual vars
-const parseDatabaseUrl = () => {
-    const databaseUrl = env.get("DATABASE_URL").asString();
+// Prefer DATABASE_URL in production (Neon/Railway). Fall back to individual vars locally.
+const parseDatabaseConfig = () => {
+    const databaseUrl = process.env.DATABASE_URL;
+
     if (databaseUrl) {
         const url = new URL(databaseUrl);
+
         return {
+            url: databaseUrl,
             host: url.hostname,
-            port: url.port ? parseInt(url.port) : 5432,
-            user: url.username,
-            password: url.password,
-            name: url.pathname.slice(1), // remove leading /
+            port: url.port ? Number(url.port) : 5432,
+            user: decodeURIComponent(url.username),
+            password: decodeURIComponent(url.password),
+            name: url.pathname.replace(/^\//, ''),
+            ssl: true,
         };
     }
-    // Fallback to individual env vars
+
+    const host = process.env.DB_HOST;
+    const port = process.env.DB_PORT;
+    const user = process.env.DB_USER;
+    const password = process.env.DB_PASSWORD;
+    const name = process.env.DB_NAME;
+
+    if (!host || !port || !user || !password || !name) {
+        throw new Error(
+            'Missing database configuration. Set DATABASE_URL or DB_HOST, DB_PORT, DB_USER, DB_PASSWORD and DB_NAME.',
+        );
+    }
+
     return {
-        host: env.get("DB_HOST").required().asString(),
-        port: env.get("DB_PORT").required().asPortNumber(),
-        user: env.get("DB_USER").required().asString(),
-        password: env.get("DB_PASSWORD").required().asString(),
-        name: env.get("DB_NAME").required().asString(),
+        host,
+        port: Number(port),
+        user,
+        password,
+        name,
+        ssl: false,
     };
 };
 
-const dbConfig = parseDatabaseUrl();
+const dbConfig = parseDatabaseConfig();
+
+const redisHost = process.env.REDIS_HOST;
+const redisPort = process.env.REDIS_PORT ? Number(process.env.REDIS_PORT) : null;
 
 export const envs = {
     PORT: env.get("PORT").required().asPortNumber(),
@@ -37,8 +57,9 @@ export const envs = {
     DB_PORT: dbConfig.port,
     DB_USER: dbConfig.user,
     DB_PASSWORD: dbConfig.password,
-    DB_SSL: env.get("DB_SSL").asBool() || process.env.DATABASE_URL?.includes('postgresql://') ? true : false,
+    DB_URL: dbConfig.url,
+    DB_SSL: env.get("DB_SSL").asBool() || dbConfig.ssl,
     APPINSIGHTS_CONNECTION_STRING: env.get("APPINSIGHTS_CONNECTION_STRING").asString(),
-    REDIS_HOST: env.get("REDIS_HOST").required().asString(),
-    REDIS_PORT: env.get("REDIS_PORT").required().asPortNumber(),
+    REDIS_HOST: redisHost,
+    REDIS_PORT: redisPort,
 };

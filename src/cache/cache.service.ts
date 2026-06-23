@@ -5,9 +5,14 @@ import { envs } from 'src/config/envs';
 @Injectable()
 export class CacheService {
     private readonly redis: Redis | null;
-    private readonly isConnected: boolean;
 
     constructor() {
+        if (!envs.REDIS_HOST || !envs.REDIS_PORT) {
+            console.warn('[CacheService] Redis variables are not configured, cache disabled');
+            this.redis = null;
+            return;
+        }
+
         try {
             this.redis = new Redis({
                 host: envs.REDIS_HOST,
@@ -15,14 +20,12 @@ export class CacheService {
                 connectTimeout: 2000,
                 retryStrategy: () => null, // Don't retry, fail fast
             });
-            this.isConnected = true;
             this.redis.on('error', () => {
                 console.warn('[CacheService] Redis connection failed, cache disabled');
             });
         } catch (error) {
             console.warn('[CacheService] Could not initialize Redis:', error);
             this.redis = null;
-            this.isConnected = false;
         }
     }
 
