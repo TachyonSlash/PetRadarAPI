@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { envs } from '../config/envs';
+import { lookup } from 'node:dns';
 import * as nodemailer from 'nodemailer';
 import { EmailOptions } from 'src/core/models/email-options.model';
 
@@ -12,11 +13,12 @@ export class EmailService {
                   port: 587,
                   secure: false,
                   requireTLS: true,
-                  family: 4,
                   auth: {
                       user: envs.MAILER_EMAIL,
                       pass: envs.MAILER_PASSWORD,
                   },
+                  lookup: (hostname, options, callback) =>
+                      lookup(hostname, { ...options, family: 4 }, callback),
                   tls: {
                       servername: 'smtp.gmail.com',
                   },

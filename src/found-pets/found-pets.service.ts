@@ -12,6 +12,11 @@ import { CacheService } from 'src/cache/cache.service';
 
 const CACHE_KEY_ALL_FOUND_PETS = "found-pets:all";
 
+const normalizeDate = (value: unknown): Date => {
+    const parsedDate = value ? new Date(value as string | number | Date) : new Date();
+    return Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+};
+
 @Injectable()
 export class FoundPetsService {
     constructor(
@@ -60,7 +65,7 @@ export class FoundPetsService {
                 coordinates: [foundPet.lon, foundPet.lat],
             },
             address: foundPet.address,
-            found_date: new Date(foundPet.found_date),
+            found_date: normalizeDate(foundPet.found_date),
         });
 
         await this.foundPetRepository.save(newFoundPet);

@@ -7,6 +7,11 @@ import { CacheService } from 'src/cache/cache.service';
 
 const CACHE_KEY_ALL_LOST_PETS = "lost-pets:all";
 
+const normalizeDate = (value: unknown): Date => {
+    const parsedDate = value ? new Date(value as string | number | Date) : new Date();
+    return Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+};
+
 @Injectable()
 export class LostPetsService {
     constructor(
@@ -55,7 +60,7 @@ export class LostPetsService {
                 coordinates: [lostPet.lon, lostPet.lat],
             },
             address: lostPet.address,
-            lost_date: new Date(lostPet.lost_date),
+            lost_date: normalizeDate(lostPet.lost_date),
             is_active: true,
         });
 
