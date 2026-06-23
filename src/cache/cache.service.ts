@@ -7,19 +7,27 @@ export class CacheService {
     private readonly redis: Redis | null;
 
     constructor() {
-        if (!envs.REDIS_HOST || !envs.REDIS_PORT) {
+        if (!envs.REDIS_URL && (!envs.REDIS_HOST || !envs.REDIS_PORT)) {
             console.warn('[CacheService] Redis variables are not configured, cache disabled');
             this.redis = null;
             return;
         }
 
         try {
-            this.redis = new Redis({
-                host: envs.REDIS_HOST,
-                port: envs.REDIS_PORT,
-                connectTimeout: 2000,
-                retryStrategy: () => null, // Don't retry, fail fast
-            });
+            this.redis = envs.REDIS_URL
+                ? new Redis(envs.REDIS_URL, {
+                    connectTimeout: 2000,
+                    retryStrategy: () => null, // Don't retry, fail fast
+                    tls: envs.REDIS_TLS ? {} : undefined,
+                })
+                : new Redis({
+                    host: envs.REDIS_HOST,
+                    port: envs.REDIS_PORT,
+                    username: envs.REDIS_USERNAME ?? undefined,
+                    password: envs.REDIS_PASSWORD ?? undefined,
+                    connectTimeout: 2000,
+                    retryStrategy: () => null, // Don't retry, fail fast
+                });
             this.redis.on('error', () => {
                 console.warn('[CacheService] Redis connection failed, cache disabled');
             });

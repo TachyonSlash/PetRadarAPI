@@ -43,8 +43,49 @@ const parseDatabaseConfig = () => {
 
 const dbConfig = parseDatabaseConfig();
 
-const redisHost = process.env.REDIS_HOST;
-const redisPort = process.env.REDIS_PORT ? Number(process.env.REDIS_PORT) : null;
+const parseRedisConfig = () => {
+    const redisUrl = process.env.REDIS_URL || process.env.REDIS_PUBLIC_URL;
+
+    if (redisUrl) {
+        const url = new URL(redisUrl);
+
+        return {
+            url: redisUrl,
+            host: url.hostname,
+            port: url.port ? Number(url.port) : 6379,
+            username: decodeURIComponent(url.username),
+            password: decodeURIComponent(url.password),
+            tls: url.protocol === 'rediss:',
+        };
+    }
+
+    const redisHost = process.env.REDIS_HOST || process.env.REDISHOST;
+    const redisPort = process.env.REDIS_PORT || process.env.REDISPORT;
+    const redisPassword = process.env.REDIS_PASSWORD || process.env.REDISPASSWORD;
+    const redisUser = process.env.REDIS_USER || process.env.REDISUSER;
+
+    if (!redisHost || !redisPort) {
+        return {
+            host: null,
+            port: null,
+            username: redisUser || null,
+            password: redisPassword || null,
+            url: null,
+            tls: false,
+        };
+    }
+
+    return {
+        host: redisHost,
+        port: Number(redisPort),
+        username: redisUser || null,
+        password: redisPassword || null,
+        url: null,
+        tls: false,
+    };
+};
+
+const redisConfig = parseRedisConfig();
 
 export const envs = {
     PORT: env.get("PORT").required().asPortNumber(),
@@ -60,6 +101,10 @@ export const envs = {
     DB_URL: dbConfig.url,
     DB_SSL: env.get("DB_SSL").asBool() || dbConfig.ssl,
     APPINSIGHTS_CONNECTION_STRING: env.get("APPINSIGHTS_CONNECTION_STRING").asString(),
-    REDIS_HOST: redisHost,
-    REDIS_PORT: redisPort,
+    REDIS_HOST: redisConfig.host,
+    REDIS_PORT: redisConfig.port,
+    REDIS_URL: redisConfig.url,
+    REDIS_USERNAME: redisConfig.username,
+    REDIS_PASSWORD: redisConfig.password,
+    REDIS_TLS: redisConfig.tls,
 };
