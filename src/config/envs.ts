@@ -90,8 +90,11 @@ const redisConfig = parseRedisConfig();
 export const envs = {
     PORT: env.get("PORT").required().asPortNumber(),
     MAILER_EMAIL: env.get("MAILER_EMAIL").required().asString(),
-    MAILER_PASSWORD: env.get("MAILER_PASSWORD").required().asString(),
+    MAILER_PASSWORD: process.env.MAILER_PASSWORD ?? '',
     MAILER_SERVICE: env.get("MAILER_SERVICE").required().asString(),
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ?? '',
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ?? '',
+    GOOGLE_REFRESH_TOKEN: process.env.GOOGLE_REFRESH_TOKEN ?? '',
     MAPBOX_TOKEN: env.get("MAPBOX_TOKEN").required().asString(),
     DB_HOST: dbConfig.host,
     DB_NAME: dbConfig.name,
